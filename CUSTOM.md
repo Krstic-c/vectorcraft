@@ -6,10 +6,58 @@ with upstream never conflicts on the agent instructions. Read `CLAUDE.md` first:
 ## Branches
 | Branch | Use |
 |---|---|
-| `main` | Mirror of `upstream/main` (`storytold/vectorcraft`). Never customised; sync with `git fetch upstream && git merge --ff-only upstream/main`. |
-| `custom` | Our changes. Bring upstream in with `git merge main` (or rebase) after syncing `main`. |
+| `main` | Mirror of `upstream/main` (`storytold/vectorcraft`). Never customised. |
+| `custom` | Our changes, and the fork's **default branch** on GitHub. |
 
-Remotes: `origin` = `Krstic-c/vectorcraft` (fork), `upstream` = `storytold/vectorcraft`.
+The fork (`origin`) has only these two branches; the ~235 branches it inherited from upstream were
+deleted (they all still exist on `upstream`). Remotes: `origin` = `Krstic-c/vectorcraft` (fork),
+`upstream` = `storytold/vectorcraft`.
+
+## Syncing with upstream
+Don't use GitHub's **Sync fork** button: the default branch (`custom`) has diverged from upstream,
+so it only offers to discard our commits or merge blindly. Sync from a terminal:
+
+```sh
+git fetch upstream
+git checkout main
+git merge --ff-only upstream/main      # main is a pure mirror: this must fast-forward
+git push origin main
+git checkout custom
+git merge main                         # resolve conflicts here (dock.rs, toolbar.rs, state.rs, widgets.rs)
+cargo test -p vectorcraft-ui-egui      # see Build environment; then push
+git push origin custom
+```
+
+If `--ff-only` refuses, `main` has a commit of ours on it: move that commit to `custom` before
+syncing. Other upstream branches (feature work, PR branches) are fetched into `upstream/*`; none
+are kept on `origin`.
+
+## Releasing a build (Windows x64)
+Output goes to `dist/release/` (gitignored): an MSI, a portable zip and `SHA256SUMS.txt`. The
+release published so far is [`v0.8.0-custom.1`](https://github.com/Krstic-c/vectorcraft/releases/tag/v0.8.0-custom.1).
+
+```powershell
+# 1. Release build, as packaging/windows/package.ps1 does it (static CRT, locked deps). In a shell with
+#    vcvars64.bat loaded (see Build environment).
+$env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS = "-C target-feature=+crt-static"
+$env:VECTORCRAFT_REQUIRE_WINRES = "1"
+cargo build --release --locked -p vectorcraft -p vectorcraft-cli --target x86_64-pc-windows-msvc
+
+# 2. MSI (+ the script's own portable zip) from the binaries just built; WiX lives on D:
+$env:DOTNET_ROOT = "D:\Dev\dotnet"; $env:NUGET_PACKAGES = "D:\Dev\dotnet\nuget"
+$env:PATH = "D:\Dev\dotnet;D:\Dev\dotnet\tools;$env:PATH"
+$env:VECTORCRAFT_VERSION = "0.8.0-custom"      # names the files; the MSI's own version stays 0.8.0
+$env:DIST = "D:\Dev\tmp\msi-out"
+powershell -NoProfile -File packaging\windows\package.ps1 -Arch x64 -SkipBuild
+
+# 3. Publish (the fork's Releases page; the tag is created on the pushed custom branch)
+gh release create v0.8.0-custom.2 <msi> <zip> SHA256SUMS.txt --repo Krstic-c/vectorcraft --target custom --title "..." --notes-file <notes.md>
+```
+
+Our portable zip is hand-made (`vectorcraft.exe`, `vectorcraft-cli.exe`, README, licences, NOTICE,
+`CUSTOM.md`): the script's one leaves out NOTICE. Check both exes before packaging: x64, GUI
+subsystem 2 for `vectorcraft.exe`, console 3 for the CLI (the script does it, step 2).
+Builds are unsigned (no certificate) and don't embed craft-fonts, so CJK text uses system fonts.
 
 ## Changes on this branch
 | Change | Where | Notes |
@@ -35,7 +83,8 @@ cargo clippy -p vectorcraft-ui-egui --all-targets -- -D warnings
 cargo fmt -p vectorcraft-ui-egui -- --check
 cargo run -p vectorcraft -- --control 7979 :: the app, with the JSON control channel
 ```
-- `target/` is inside the repo (D: drive, gitignored). Expect 10+ GB after full builds.
+- .NET 8 SDK (zip install, no installer) in `D:\Dev\dotnet`, with WiX v5.0.2 as a tool in `D:\Dev\dotnet\tools` and its NuGet cache in `D:\Dev\dotnet\nuget`: only needed for the MSI. Set `DOTNET_ROOT`, `NUGET_PACKAGES` and PATH per shell (see Releasing); WiX's extension cache (~2 MB) still lands in `C:\Users\<you>\.wix`.
+- `target/` is inside the repo (D: drive, gitignored). Expect 10+ GB after full builds; the release build for `x86_64-pc-windows-msvc` adds its own `target\x86_64-pc-windows-msvc\release`.
 - The first build downloads ~250 crates straight from crates.io (reachable without a mirror from this network).
 
 ## Known pitfalls
@@ -43,7 +92,8 @@ cargo run -p vectorcraft -- --control 7979 :: the app, with the JSON control cha
 - A `ui.horizontal` row registers a second rect a few points wider than its button: de-duplicate by `top()` in tests.
 - Passing `ui` and `ui.id()...` to a free function in one call trips the borrow checker: compute the id first.
 
+- Checking UI in the running app: start it with `VECTORCRAFT_NO_PREFS=1` and `--control 7979` (no preferences are read or written), then `ui.drag` / `ui.screenshot` over the control channel. Synthetic input goes one event per frame; queue one drag at a time.
+
 ## To do
-- Look at the result in the running app (`ui.screenshot` over the control channel) and tune row heights/fonts.
 - The bottom controls of a wide Tools panel (fill/stroke, draw mode) are still centred at their old size.
 - Consider a menu entry / command for the widths (`window.iconNames`) so the control channel and MCP can set them.
