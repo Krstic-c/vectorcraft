@@ -9,3 +9,6 @@
   - 新增 `widgets::paint_icon_row`、`widgets::width_grip`、`widgets::LABELS_MIN`。
   - 测试：`dock::tests::dragging_the_column_edge_…`、`toolbar::tests::dragging_the_right_edge_…`、`an_unusable_saved_column_width_is_reset`；ui-egui 全部 885 测试通过，fmt / clippy -D warnings 干净。
 - 构建环境：Rust 1.99 装在 `D:\Dev\rust`（RUSTUP_HOME / CARGO_HOME 为用户级变量），VS Build Tools 装在 `D:\Dev\BuildTools`（Windows SDK 在 C 盘）。编译命令与注意事项见 `CUSTOM.md`（单独文件，避免与上游的 `CLAUDE.md` 同步冲突）。
+- 打包：Windows x64 便携 zip（`dist/release/vectorcraft-0.8.0-custom-windows-x64-portable.zip`，已被 gitignore）。
+  - 命令同 `packaging/windows/package.ps1` 的构建部分：`cargo build --release --locked -p vectorcraft -p vectorcraft-cli --target x86_64-pc-windows-msvc`，环境变量 `CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS=-C target-feature=+crt-static`、`VECTORCRAFT_REQUIRE_WINRES=1`。
+  - 未签名、未嵌入 craft-fonts（CJK 靠系统字体回退）；MSI 需要另装 .NET + WiX v5，暂未做。
