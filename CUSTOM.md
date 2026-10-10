@@ -87,6 +87,20 @@ cargo run -p vectorcraft -- --control 7979 :: the app, with the JSON control cha
 - `target/` is inside the repo (D: drive, gitignored). Expect 10+ GB after full builds; the release build for `x86_64-pc-windows-msvc` adds its own `target\x86_64-pc-windows-msvc\release`.
 - The first build downloads ~250 crates straight from crates.io (reachable without a mirror from this network).
 
+## Build environment (macOS)
+- Rust via Homebrew (`brew install rust`); satisfies `rust-version = "1.95"` in `Cargo.toml` (gives 1.99). No rustup, no toolchain file in the repo, so this just works. Xcode Command Line Tools (`xcode-select -p`) must already be installed — needed for the linker.
+
+```sh
+cd ~/Documents/GitHub/vectorcraft
+cargo test -p vectorcraft-ui-egui          # 885 tests, ~4s once built (clean build pulls ~250 crates, several minutes)
+cargo clippy -p vectorcraft-ui-egui --all-targets -- -D warnings
+cargo fmt -p vectorcraft-ui-egui -- --check
+VECTORCRAFT_NO_PREFS=1 cargo run -p vectorcraft -- --control 7979   # see Known pitfalls: always set this for a test run
+```
+- Verified 2026-10-10: all three checks clean, and `ui.drag` over the control channel both collapses (`icon_column_width` → `0.0`) and restores (≥ `LABELS_MIN`) the icon column live in the running app — matches the Windows-side behaviour.
+- Without `VECTORCRAFT_NO_PREFS=1`, a test run reads/writes the real `~/Library/Application Support/VectorCraft/` (`ui.json`, `Data Recovery/`, `logs/`) — fine for the actual app, but pollutes it for a throwaway test run.
+- `target/` stays inside the repo, gitignored; same ~10+ GB expectation as Windows.
+
 ## Known pitfalls
 - `widget_rects` based tests find buttons by size; a wide (named) row doesn't match a 30×30 / 36×29 filter, so those tests keep the default width.
 - A `ui.horizontal` row registers a second rect a few points wider than its button: de-duplicate by `top()` in tests.
