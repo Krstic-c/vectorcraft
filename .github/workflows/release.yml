@@ -65,7 +65,9 @@ jobs:
   macos:
     name: macOS universal
     needs: version
-    runs-on: macos-15-xlarge  # M2 Pro larger runner; use only in release.yml (actions_macos_xl budget caps spend)
+    # Custom branch: macos-15-xlarge is a paid larger runner (not covered by the public-repo free
+    # tier on a personal account); macos-14 is a standard Apple Silicon runner, free and unmetered.
+    runs-on: macos-14
     environment: release
     env:
       VECTORCRAFT_VERSION: ${{ needs.version.outputs.version }}

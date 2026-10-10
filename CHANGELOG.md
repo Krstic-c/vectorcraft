@@ -16,3 +16,4 @@
 - 仓库：fork 默认分支改为 `custom`；删除 fork 上继承自上游的 235 个分支，只保留 `main`、`custom`（上游分支仍在 upstream 上）。
 - 文档：`CUSTOM.md` 补充"与上游同步"（不要用网页 Sync fork）和"打包发布"流程。
 - Mac 上 clone 到 `~/Documents/GitHub/vectorcraft`（独立 git 工作区）：Windows 端的 2 个 commit 已经通过 git 带过来，不需要重新实现。装了 Homebrew Rust 1.99 验证：`cargo test -p vectorcraft-ui-egui` 885 全过、clippy/fmt 干净，实际跑起来用控制通道拖动验证了图标列展开/收起。`CUSTOM.md` 补了对应的 macOS 构建环境小节。
+- 打包：macOS Apple Silicon（`packaging/macos/package.sh --arch aarch64`），ad-hoc 签名（没有 Apple 开发者证书，未 notarize）。发布为 GitHub Release `v0.8.0-custom.2`（https://github.com/Krstic-c/vectorcraft/releases/tag/v0.8.0-custom.2）：`.dmg` + CLI zip + SHA256SUMS。未 notarize 的后果：别的 Mac 下载后 Gatekeeper 会拦截，需要 `xattr -d com.apple.quarantine` 或系统设置里手动放行，release notes 里写了步骤。
